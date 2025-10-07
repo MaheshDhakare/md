@@ -1,0 +1,29 @@
+{
+  "name": "property-backend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "nodemon --watch src --exec node src/index.js",
+    "start": "node src/index.js",
+    "migrate": "knex migrate:latest --knexfile knexfile.js",
+    "migrate:rollback": "knex migrate:down --knexfile knexfile.js",
+    "seed": "node scripts/seed_dummy_data.js",
+    "test": "echo \"(tests not included in starter)\" && exit 0"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1570.0",
+    "bcrypt": "^5.1.0",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.0",
+    "knex": "^2.6.0",
+    "multer": "^1.4.5-lts.1",
+    "pg": "^8.11.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
