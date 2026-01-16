@@ -3,11 +3,15 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Shared</title>
+  <title>Shared Property</title>
   <link rel="stylesheet" href="./share.css"/>
 </head>
 <body>
   <div class="wrap">
+    <header class="top">
+      <div class="brand">Property Manager</div>
+      <div class="subtitle" id="subtitle"></div>
+    </header>
 
     <main class="card">
       <div class="row">
@@ -36,6 +40,11 @@
         <div id="attList"></div>
       </section>
     </main>
+
+    <footer class="foot">
+      <button id="copyBtn">Copy Text</button>
+      <button id="openBtn">Open in Browser</button>
+    </footer>
   </div>
 
   <script src="./share.js"></script>

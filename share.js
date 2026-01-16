@@ -66,6 +66,7 @@ function escapeHtml(s){
         <div class="att">
           <div style="min-width:0;flex:1;">
             <div class="name">${name}</div>
+            <div class="src">${src}</div>
           </div>
           <a href="${src}" target="_blank" rel="noopener">Open</a>
         </div>

@@ -16,7 +16,7 @@ body{
   background:#fff;
   margin:12px;
   border-radius:14px;
-  padding:10px;
+  padding:14px;
   box-shadow:0 8px 22px rgba(0,0,0,.08);
 }
 .row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
@@ -25,7 +25,7 @@ body{
   background:#eff6ff;color:#1d4ed8;font-weight:700;font-size:12px
 }
 h1{font-size:20px;margin-top:4px;margin-bottom:10px;text-transform:capitalize}
-.meta{font-size:15px;opacity:.95;margin-bottom:10px}
+.meta{font-size:14px;opacity:.95;margin-bottom:10px}
 .sec{margin-top:14px}
 .sec h2{font-size:15px;margin-bottom:8px}
 #summary{font-size:14px;line-height:1.55;white-space:pre-wrap}
@@ -47,3 +47,19 @@ h1{font-size:20px;margin-top:4px;margin-bottom:10px;text-transform:capitalize}
   padding:8px 10px;border-radius:10px;
   font-size:13px;text-decoration:none;font-weight:700
 }
+.foot{
+  margin-top:auto;
+  padding:12px;
+  display:flex;
+  gap:10px;
+}
+.foot button{
+  flex:1;
+  border:none;
+  padding:12px;
+  border-radius:12px;
+  font-weight:800;
+  cursor:pointer;
+}
+#copyBtn{background:#0ea5e9;color:#fff}
+#openBtn{background:#1d4ed8;color:#fff}
