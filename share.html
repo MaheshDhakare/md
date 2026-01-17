@@ -191,18 +191,18 @@
         </div>
 
         <section class="sec">
-          <h2>Summary</h2>
+          <h2>Summary:</h2>
           <div id="summary"></div>
         </section>
 
         <section class="sec" id="imgSec">
-          <h2>Images</h2>
+          <h2>Images:</h2>
           <div class="imgGrid" id="imgGrid"></div>
           <div class="empty" id="imgEmpty" style="display:none;">No images.</div>
         </section>
 
         <section class="sec" id="attSec">
-          <h2>Files</h2>
+          <h2>Files:</h2>
           <div class="attList" id="attList"></div>
           <div class="empty" id="attEmpty" style="display:none;">No files.</div>
         </section>
@@ -236,6 +236,38 @@
       .replace(/"/g,"&quot;")
       .replace(/'/g,"&#039;");
   }
+
+	function summaryToBullets(summary) {
+	  let items = [];
+
+	  if (Array.isArray(summary)) {
+		items = summary.map(s => String(s));
+	  } else if (typeof summary === 'string') {
+		items = summary.split(/\r?\n/);
+	  } else if (summary && typeof summary === 'object') {
+		items = Object.values(summary).map(v => String(v));
+	  }
+
+	  // cleanup lines
+	  items = items
+		.map(s => String(s || '')
+		  .replace(/\u00A0/g, ' ')
+		  .replace(/\t/g, ' ')
+		  .trim()
+		)
+		.filter(Boolean)
+		// ✅ remove bullet markers if already present
+		.map(s => s.replace(/^[\s•\-\*\u2022]+/, '').trim());
+
+	  if (!items.length) return '';
+
+	  return (
+		`<ul style="margin:0; padding-left:20px; list-style-type:disc;">` +
+		items.map(line => `<li style="margin:0 0 6px 0;">${escapeHtml(line)}</li>`).join('') +
+		`</ul>`
+	  );
+	}
+
 
   function safeText(v){ return String(v||'').trim(); }
 
@@ -280,7 +312,7 @@
         // ✅ Render UI
         document.getElementById('title').textContent = safeText(payload.title);
         document.getElementById('area').textContent  = safeText(payload.area);
-        document.getElementById('summary').textContent = safeText(payload.summary);
+        document.getElementById('summary').innerHTML = summaryToBullets(payload.summary);
 
         // Shared By
         const sb = safeText(payload.shared_by);
