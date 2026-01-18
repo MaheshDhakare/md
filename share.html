@@ -327,26 +327,7 @@
     }catch(e){ return null; }
   }
 
-async function fetchFallbackContactFromServer(sid){
-  try{
-    const contactFile = `share_contact_${encodeURIComponent(sid)}.json`;
-    const contactUrl =
-      `https://mxuknvleveqqybhbhwnv.supabase.co/storage/v1/object/public/shares/${contactFile}`;
-
-    const r = await fetch(contactUrl);
-    if (!r.ok) return null;
-
-    const payload = await r.json();
-    if (!payload) return null;
-
-    return payload;
-  }catch(e){
-    return null;
-  }
-}
-
-
-  async function showExpiredUI(sid){
+  function showExpiredUI(sid){
     // hide property sections
     const title = document.getElementById('title');
 	const metaBlock = document.querySelector('.meta');
@@ -358,8 +339,10 @@ async function fetchFallbackContactFromServer(sid){
     const sharedByRow = document.getElementById('sharedByRow');
 
     if (title) title.textContent = '';
+	if (metaBlock) metaBlock.style.display = 'none';
     if (area) area.textContent = '';
     if (summary) summary.innerHTML = '';
+	if (summarySection) summarySection.style.display = 'none';
     if (imgSec) imgSec.style.display = 'none';
     if (attSec) attSec.style.display = 'none';
     if (sharedByRow) sharedByRow.style.display = 'none';
@@ -371,41 +354,9 @@ async function fetchFallbackContactFromServer(sid){
 
     if (expiredSec) expiredSec.style.display = 'block';
 
-	let cached = getCachedShareContact(sid);
-
-	// ✅ If no local cache, try fetch fallback contact json from server
-	if (!cached) {
-	  const serverFallback = await fetchFallbackContactFromServer(sid);
-	  if (serverFallback) {
-		cacheShareContact(sid, serverFallback);
-		cached = getCachedShareContact(sid);
-	  }
-	}
-
-	const name = safeText(cached?.shared_by);
-	const phone = safeText(cached?.shared_contact);
-
-
-    if (expiredContact) {
-      expiredContact.textContent = (name || phone) ? (name || 'Shared By') : 'Contact information not available.';
-    }
-	if (expiredContact2) {
-	  if (phone) {
-		expiredContact2.innerHTML = `
-		  <span>${escapeHtml(phone)}</span>
-		  <a
-			href="tel:${escapeHtml(String(phone).trim())}"
-			title="Call"
-			style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;
-				   margin-left:10px;"
-		  >
-			<i class="fa fa-phone" style="color:green;font-size:18px;"></i>
-		  </a>
-		`;
-	  } else {
-		expiredContact2.textContent = '';
-	  }
-	}
+    const cached = getCachedShareContact(sid);
+    const name = safeText(cached?.shared_by);
+    const phone = safeText(cached?.shared_contact);
 
 
     // ✅ show page even in expired mode so Ad remains visible
@@ -573,8 +524,7 @@ async function fetchFallbackContactFromServer(sid){
         if (ld) ld.style.display = "none";
 
         // ✅ show expired UI (keeps Ad section visible)
-        await showExpiredUI(sid);
-
+        showExpiredUI(sid);
       }
     })();
   })();
