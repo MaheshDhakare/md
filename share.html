@@ -208,6 +208,22 @@
         </section>
       </main>
 
+      <!-- ✅ Expired UI (hidden by default) -->
+      <section class="sec" id="expiredSec" style="display:none;">
+        <div class="card" style="padding:14px;border-radius:16px;">
+          <div style="font-weight:900;font-size:16px;margin-bottom:8px;">
+            This shared link is expired.
+          </div>
+
+          <div id="expiredHint" style="opacity:.85;font-size:14px;line-height:1.45;">
+            To get details about the property you should contact:
+          </div>
+
+          <div id="expiredContact" style="margin-top:10px;font-weight:900;font-size:15px;"></div>
+          <div id="expiredContact2" style="margin-top:6px;opacity:.85;font-size:14px;"></div>
+        </div>
+      </section>
+
       <!-- ✅ Ad section BELOW the card (not inside it) -->
       <section class="sec" id="adSec">
         <div class="ad-placeholder">
@@ -237,37 +253,36 @@
       .replace(/'/g,"&#039;");
   }
 
-	function summaryToBullets(summary) {
-	  let items = [];
+  function summaryToBullets(summary) {
+    let items = [];
 
-	  if (Array.isArray(summary)) {
-		items = summary.map(s => String(s));
-	  } else if (typeof summary === 'string') {
-		items = summary.split(/\r?\n/);
-	  } else if (summary && typeof summary === 'object') {
-		items = Object.values(summary).map(v => String(v));
-	  }
+    if (Array.isArray(summary)) {
+      items = summary.map(s => String(s));
+    } else if (typeof summary === 'string') {
+      items = summary.split(/\r?\n/);
+    } else if (summary && typeof summary === 'object') {
+      items = Object.values(summary).map(v => String(v));
+    }
 
-	  // cleanup lines
-	  items = items
-		.map(s => String(s || '')
-		  .replace(/\u00A0/g, ' ')
-		  .replace(/\t/g, ' ')
-		  .trim()
-		)
-		.filter(Boolean)
-		// ✅ remove bullet markers if already present
-		.map(s => s.replace(/^[\s•\-\*\u2022]+/, '').trim());
+    // cleanup lines
+    items = items
+      .map(s => String(s || '')
+        .replace(/\u00A0/g, ' ')
+        .replace(/\t/g, ' ')
+        .trim()
+      )
+      .filter(Boolean)
+      // ✅ remove bullet markers if already present
+      .map(s => s.replace(/^[\s•\-\*\u2022]+/, '').trim());
 
-	  if (!items.length) return '';
+    if (!items.length) return '';
 
-	  return (
-		`<ul style="margin:0; padding-left:20px; list-style-type:disc;">` +
-		items.map(line => `<li style="margin:0 0 6px 0;">${escapeHtml(line)}</li>`).join('') +
-		`</ul>`
-	  );
-	}
-
+    return (
+      `<ul style="margin:0; padding-left:20px; list-style-type:disc;">` +
+      items.map(line => `<li style="margin:0 0 6px 0;">${escapeHtml(line)}</li>`).join('') +
+      `</ul>`
+    );
+  }
 
   function safeText(v){ return String(v||'').trim(); }
 
@@ -286,6 +301,66 @@
         .catch(err => console.warn('SW register failed', err));
     }catch(e){}
   })();
+
+  // ===================================================
+  // ✅ Cache shared_by/contact so expired link can show fallback
+  // ===================================================
+  function cacheShareContact(sid, payload){
+    try{
+      const obj = {
+        shared_by: safeText(payload?.shared_by),
+        shared_contact: safeText(payload?.shared_contact),
+        cached_at: Date.now()
+      };
+      localStorage.setItem(`share_contact_${sid}`, JSON.stringify(obj));
+    }catch(e){}
+  }
+
+  function getCachedShareContact(sid){
+    try{
+      const raw = localStorage.getItem(`share_contact_${sid}`);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    }catch(e){ return null; }
+  }
+
+  function showExpiredUI(sid){
+    // hide property sections
+    const title = document.getElementById('title');
+    const area = document.getElementById('area');
+    const summary = document.getElementById('summary');
+    const imgSec = document.getElementById('imgSec');
+    const attSec = document.getElementById('attSec');
+    const sharedByRow = document.getElementById('sharedByRow');
+
+    if (title) title.textContent = '';
+    if (area) area.textContent = '';
+    if (summary) summary.innerHTML = '';
+    if (imgSec) imgSec.style.display = 'none';
+    if (attSec) attSec.style.display = 'none';
+    if (sharedByRow) sharedByRow.style.display = 'none';
+
+    // show expired section
+    const expiredSec = document.getElementById('expiredSec');
+    const expiredContact = document.getElementById('expiredContact');
+    const expiredContact2 = document.getElementById('expiredContact2');
+
+    if (expiredSec) expiredSec.style.display = 'block';
+
+    const cached = getCachedShareContact(sid);
+    const name = safeText(cached?.shared_by);
+    const phone = safeText(cached?.shared_contact);
+
+    if (expiredContact) {
+      expiredContact.textContent = (name || phone) ? (name || 'Shared By') : 'Contact information not available.';
+    }
+    if (expiredContact2) {
+      expiredContact2.textContent = phone ? phone : '';
+    }
+
+    // ✅ show page even in expired mode so Ad remains visible
+    showContent();
+  }
 
   (function init(){
     const sid = String(qs('sid') || '').trim();
@@ -308,6 +383,9 @@
 
         const payload = await res.json();
         if (!payload) throw new Error("Invalid JSON payload");
+
+        // ✅ Cache shared_by/contact for fallback later
+        cacheShareContact(sid, payload);
 
         // ✅ Render UI
         document.getElementById('title').textContent = safeText(payload.title);
@@ -375,47 +453,44 @@
         const viewerImg = document.getElementById('viewerImg');
         const viewerClose = document.getElementById('viewerClose');
 
-		let viewerOpen = false;
+        let viewerOpen = false;
 
-		imgGrid.addEventListener('click', (e) => {
-		  const t = e.target;
-		  if (!t || t.tagName !== "IMG") return;
+        imgGrid.addEventListener('click', (e) => {
+          const t = e.target;
+          if (!t || t.tagName !== "IMG") return;
 
-		  const src = t.getAttribute("data-src") || t.getAttribute("src");
-		  if (!src) return;
+          const src = t.getAttribute("data-src") || t.getAttribute("src");
+          if (!src) return;
 
-		  viewerImg.src = src;
-		  viewer.style.display = "grid";
+          viewerImg.src = src;
+          viewer.style.display = "grid";
 
-		  // ✅ Push a history entry so Back button closes viewer first
-		  if (!viewerOpen) {
-			viewerOpen = true;
-			history.pushState({ viewer: true }, "");
-		  }
-		});
+          // ✅ Push a history entry so Back button closes viewer first
+          if (!viewerOpen) {
+            viewerOpen = true;
+            history.pushState({ viewer: true }, "");
+          }
+        });
 
+        function closeViewer(fromPopstate = false){
+          viewer.style.display = "none";
+          viewerImg.src = "";
 
-		function closeViewer(fromPopstate = false){
-		  viewer.style.display = "none";
-		  viewerImg.src = "";
+          // ✅ If user closed by ✕ button, remove viewer history state
+          if (viewerOpen && !fromPopstate) {
+            viewerOpen = false;
+            history.back();
+          } else {
+            viewerOpen = false;
+          }
+        }
 
-		  // ✅ If user closed by ✕ button, remove viewer history state
-		  if (viewerOpen && !fromPopstate) {
-			viewerOpen = false;
-			history.back(); 
-			// This will trigger popstate, but we'll ignore it properly
-		  } else {
-			viewerOpen = false;
-		  }
-		}
-
-		window.addEventListener('popstate', (event) => {
-		  if (viewerOpen) {
-			// ✅ Back button should close viewer, not exit page
-			closeViewer(true);
-		  }
-		});
-
+        window.addEventListener('popstate', (event) => {
+          if (viewerOpen) {
+            // ✅ Back button should close viewer, not exit page
+            closeViewer(true);
+          }
+        });
 
         viewerClose.addEventListener('click', closeViewer);
         viewer.addEventListener('click', (e) => {
@@ -428,12 +503,13 @@
       }catch(e){
         const ld = document.getElementById('pageLoader');
         if (ld) ld.style.display = "none";
-        document.body.innerHTML = "<div style='padding:18px;font-weight:900;font-family:system-ui'>This shared linked is expired.</div>";
+
+        // ✅ show expired UI (keeps Ad section visible)
+        showExpiredUI(sid);
       }
     })();
   })();
 </script>
-
 
 </body>
 </html>

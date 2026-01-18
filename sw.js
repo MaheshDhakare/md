@@ -10,9 +10,6 @@ const CACHE_NAME = "propcola-share-v1";
 function isSupabasePublicStorage(url) {
   try {
     const u = new URL(url);
-
-    // your project storage host
-    // mxuknvleveqqybhbhwnv.supabase.co/storage/v1/object/public/
     return (
       u.hostname === "mxuknvleveqqybhbhwnv.supabase.co" &&
       u.pathname.includes("/storage/v1/object/public/")
@@ -22,8 +19,18 @@ function isSupabasePublicStorage(url) {
   }
 }
 
+// ✅ Normalize request key so cache works even if URL has query params
+function normalizeRequest(req) {
+  const u = new URL(req.url);
+  const cleanUrl = u.origin + u.pathname; // drop ?query
+  return new Request(cleanUrl, {
+    method: "GET",
+    headers: req.headers
+  });
+}
+
 // Optional: limit cache size so it doesn't grow forever
-async function trimCache(maxItems = 120) {
+async function trimCache(maxItems = 150) {
   const cache = await caches.open(CACHE_NAME);
   const keys = await cache.keys();
   if (keys.length <= maxItems) return;
@@ -34,7 +41,7 @@ async function trimCache(maxItems = 120) {
   }
 }
 
-self.addEventListener("install", (event) => {
+self.addEventListener("install", () => {
   self.skipWaiting();
 });
 
@@ -44,15 +51,12 @@ self.addEventListener("activate", (event) => {
 
     // Cleanup old cache versions if changed
     const keys = await caches.keys();
-    await Promise.all(
-      keys.map(k => (k !== CACHE_NAME ? caches.delete(k) : null))
-    );
+    await Promise.all(keys.map(k => (k !== CACHE_NAME ? caches.delete(k) : null)));
   })());
 });
 
 // ✅ Cache strategy:
 // - Cache First for Supabase storage (fast + reduces bandwidth)
-// - If not in cache -> fetch -> store -> return
 self.addEventListener("fetch", (event) => {
   const req = event.request;
 
@@ -66,9 +70,10 @@ self.addEventListener("fetch", (event) => {
 
   event.respondWith((async () => {
     const cache = await caches.open(CACHE_NAME);
+    const key = normalizeRequest(req);
 
     // 1) return cache if exists
-    const cached = await cache.match(req);
+    const cached = await cache.match(key);
     if (cached) return cached;
 
     // 2) fetch from network
@@ -78,11 +83,9 @@ self.addEventListener("fetch", (event) => {
       // only cache success responses
       if (res && res.ok) {
         try {
-          await cache.put(req, res.clone());
-          trimCache(150); // limit growth
-        } catch (e) {
-          // ignore cache put errors
-        }
+          await cache.put(key, res.clone());
+          trimCache(150);
+        } catch (e) {}
       }
 
       return res;
