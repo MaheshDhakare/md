@@ -329,23 +329,8 @@
 
   function showExpiredUI(sid){
     // hide property sections
-    const title = document.getElementById('title');
-	const metaBlock = document.querySelector('.meta');
-    const area = document.getElementById('area');
-    const summary = document.getElementById('summary');
-	const summarySection = summary ? summary.closest('section') : null;
-    const imgSec = document.getElementById('imgSec');
-    const attSec = document.getElementById('attSec');
-    const sharedByRow = document.getElementById('sharedByRow');
-
-    if (title) title.textContent = '';
-	if (metaBlock) metaBlock.style.display = 'none';
-    if (area) area.textContent = '';
-    if (summary) summary.innerHTML = '';
-	if (summarySection) summarySection.style.display = 'none';
-    if (imgSec) imgSec.style.display = 'none';
-    if (attSec) attSec.style.display = 'none';
-    if (sharedByRow) sharedByRow.style.display = 'none';
+	const cardBlock = document.querySelector('.card');
+	if (cardBlock) cardBlock.style.display = 'none';
 
     // show expired section
     const expiredSec = document.getElementById('expiredSec');
@@ -357,6 +342,27 @@
     const cached = getCachedShareContact(sid);
     const name = safeText(cached?.shared_by);
     const phone = safeText(cached?.shared_contact);
+
+    if (expiredContact) {
+      expiredContact.textContent = (name || phone) ? (name || 'Shared By') : 'Contact information not available.';
+    }
+	if (expiredContact2) {
+	  if (phone) {
+		expiredContact2.innerHTML = `
+		  <span>${escapeHtml(phone)}</span>
+		  <a
+			href="tel:${escapeHtml(String(phone).trim())}"
+			title="Call"
+			style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;
+				   margin-left:10px;"
+		  >
+			<i class="fa fa-phone" style="color:green;font-size:18px;"></i>
+		  </a>
+		`;
+	  } else {
+		expiredContact2.textContent = '';
+	  }
+	}
 
 
     // ✅ show page even in expired mode so Ad remains visible
