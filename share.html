@@ -331,6 +331,44 @@
     if (ct) ct.style.display = "block";
   }
 
+
+  // ===================================================
+  // ✅ Best Offline: ask browser for persistent storage (reduces auto-eviction)
+  // ===================================================
+  async function requestPersistence(){
+    try{
+      if (navigator.storage && navigator.storage.persist){
+        const persisted = await navigator.storage.persist();
+        return persisted;
+      }
+    }catch(e){}
+    return false;
+  }
+
+  // ===================================================
+  // ✅ Best Offline: Pre-cache ALL assets (JSON + images + attachments)
+  // This ensures 2nd open onward hits NO Supabase requests.
+  // ===================================================
+  async function precacheAssets(urls){
+    try{
+      if (!('serviceWorker' in navigator)) return;
+
+      // wait SW ready
+      await navigator.serviceWorker.ready;
+
+      // If SW isn't controlling yet (first install), reload once so it controls.
+      if (!navigator.serviceWorker.controller){
+        location.reload();
+        return;
+      }
+
+      navigator.serviceWorker.controller.postMessage({
+        type: "PRECACHE_ASSETS",
+        urls: urls
+      });
+    }catch(e){}
+  }
+
   // ✅ Register Service Worker (Cache Supabase assets)
   (function registerSW(){
     try{
@@ -435,6 +473,20 @@ function showExpiredUI(sid){
         if (!res.ok) throw new Error("Share JSON not found");
 
         const payload = await res.json();
+
+        // ✅ Reduce chance of browser clearing offline cache automatically
+        requestPersistence();
+
+        // ✅ Pre-cache JSON + all media/files right away for true offline mode
+        // After this completes, next opens should NOT hit Supabase at all.
+        const assetUrls = [
+          jsonUrl,
+          ...(Array.isArray(payload.images) ? payload.images : []),
+          ...(Array.isArray(payload.attachments) ? payload.attachments.map(a => a?.src).filter(Boolean) : [])
+        ].filter(Boolean);
+
+        precacheAssets(assetUrls);
+
         if (!payload) throw new Error("Invalid JSON payload");
 
         // ✅ Cache shared_by/contact for fallback later
