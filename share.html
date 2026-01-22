@@ -253,15 +253,6 @@
     <img id="viewerImg" src="" alt="preview"/>
   </div>
 
-
-  <!-- Media Player Modal (MP4/MP3 offline via IndexedDB Blob) -->
-  <div class="viewer" id="mediaViewer" style="display:none;">
-    <button class="viewerClose" id="mediaViewerClose">✕</button>
-    <div id="mediaViewerBody" style="width:min(100%,720px);">
-      <!-- injected -->
-    </div>
-  </div>
-
 <script>
   function qs(k){ return new URLSearchParams(location.search).get(k); }
 
@@ -339,230 +330,6 @@
     if (ld) ld.style.display = "none";
     if (ct) ct.style.display = "block";
   }
-
-
-  // ===================================================
-  // ✅ Best Offline: ask browser for persistent storage (reduces auto-eviction)
-  // ===================================================
-  async function requestPersistence(){
-    try{
-      if (navigator.storage && navigator.storage.persist){
-        const persisted = await navigator.storage.persist();
-        return persisted;
-      }
-    }catch(e){}
-    return false;
-  }
-
-  // ===================================================
-  // ✅ Best Offline: Pre-cache ALL assets (JSON + images + attachments)
-  // This ensures 2nd open onward hits NO Supabase requests.
-  // ===================================================
-  async function precacheAssets(urls){
-    try{
-      if (!('serviceWorker' in navigator)) return;
-
-      // wait SW ready
-      await navigator.serviceWorker.ready;
-
-      // If SW isn't controlling yet (first install), reload once so it controls.
-      if (!navigator.serviceWorker.controller){
-        location.reload();
-        return;
-      }
-
-      navigator.serviceWorker.controller.postMessage({
-        type: "PRECACHE_ASSETS",
-        urls: urls
-      });
-    }catch(e){}
-  }
-
-  // ===================================================
-  // ✅ IndexedDB Media Store: best offline for MP4/MP3
-  // ===================================================
-  const MEDIA_DB = "propcola_share_media_v1";
-  const MEDIA_STORE = "files";
-
-  function normalizeMediaKey(url){
-    try{
-      const u = new URL(url);
-      // keep pathname only (ignore query), consistent key
-      return u.origin + u.pathname;
-    }catch(e){
-      return String(url || '');
-    }
-  }
-
-  function openMediaDB(){
-    return new Promise((resolve, reject)=>{
-      const req = indexedDB.open(MEDIA_DB, 1);
-      req.onupgradeneeded = ()=>{
-        const db = req.result;
-        if (!db.objectStoreNames.contains(MEDIA_STORE)){
-          db.createObjectStore(MEDIA_STORE, { keyPath: "key" });
-        }
-      };
-      req.onsuccess = ()=> resolve(req.result);
-      req.onerror = ()=> reject(req.error);
-    });
-  }
-
-  async function idbGet(key){
-    const db = await openMediaDB();
-    return new Promise((resolve)=>{
-      const tx = db.transaction(MEDIA_STORE, "readonly");
-      const st = tx.objectStore(MEDIA_STORE);
-      const req = st.get(key);
-      req.onsuccess = ()=> resolve(req.result || null);
-      req.onerror = ()=> resolve(null);
-    });
-  }
-
-  async function idbPut(obj){
-    const db = await openMediaDB();
-    return new Promise((resolve)=>{
-      const tx = db.transaction(MEDIA_STORE, "readwrite");
-      const st = tx.objectStore(MEDIA_STORE);
-      st.put(obj);
-      tx.oncomplete = ()=> resolve(true);
-      tx.onerror = ()=> resolve(false);
-    });
-  }
-
-  async function downloadAndStoreBlob(url){
-    const key = normalizeMediaKey(url);
-    const existing = await idbGet(key);
-    if (existing && existing.blob) return existing;
-
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("download failed: " + res.status);
-
-    const blob = await res.blob();
-    const obj = {
-      key,
-      blob,
-      type: blob.type || res.headers.get("content-type") || "application/octet-stream",
-      size: blob.size || 0,
-      cached_at: Date.now()
-    };
-    await idbPut(obj);
-    return obj;
-  }
-
-  function guessFileType(url, mime){
-    const u = String(url || '').toLowerCase();
-    if (mime && mime.startsWith("video/")) return "video";
-    if (mime && mime.startsWith("audio/")) return "audio";
-    if (u.includes(".mp4")) return "video";
-    if (u.includes(".webm")) return "video";
-    if (u.includes(".mp3")) return "audio";
-    if (u.includes(".wav")) return "audio";
-    if (u.includes(".m4a")) return "audio";
-    return "file";
-  }
-
-let mediaViewerOpen = false;
-
-function openMediaModal(htmlContent){
-  const mv = document.getElementById("mediaViewer");
-  const body = document.getElementById("mediaViewerBody");
-  if (!mv || !body) return;
-
-  body.innerHTML = htmlContent;
-  mv.style.display = "grid";
-
-  // ✅ Only push state once
-  if (!mediaViewerOpen){
-    mediaViewerOpen = true;
-    history.pushState({ mediaViewer: true }, "");
-  }
-}
-
-
-function closeMediaModal(fromPopstate = false){
-  const mv = document.getElementById("mediaViewer");
-  const body = document.getElementById("mediaViewerBody");
-  if (!mv || !body) return;
-
-  mv.style.display = "none";
-  body.innerHTML = "";
-
-  if (mediaViewerOpen && !fromPopstate) {
-    mediaViewerOpen = false;
-    history.back();  // ✅ back removes modal state
-  } else {
-    mediaViewerOpen = false;
-  }
-}
-
-
-function wireMediaViewer(){
-  const closeBtn = document.getElementById("mediaViewerClose");
-  const mv = document.getElementById("mediaViewer");
-
-  if (closeBtn) closeBtn.addEventListener("click", () => closeMediaModal(false));
-
-  if (mv) mv.addEventListener("click", (e)=>{
-    if (e.target === mv) closeMediaModal(false);
-  });
-
-  // ✅ Back button closes Media Viewer (not exit page)
-  window.addEventListener("popstate", () => {
-    if (mediaViewerOpen) {
-      closeMediaModal(true);
-    }
-  });
-}
-
-
-  async function openOfflineMedia(url){
-    const key = normalizeMediaKey(url);
-
-    // 1) try IDB cache first
-    let obj = await idbGet(key);
-
-    // 2) if not cached, download now (online only)
-    if (!obj || !obj.blob){
-      obj = await downloadAndStoreBlob(url);
-    }
-
-    const blobUrl = URL.createObjectURL(obj.blob);
-    const kind = guessFileType(url, obj.type);
-
-    if (kind === "video"){
-      openMediaModal(`
-        <video controls autoplay playsinline
-               style="width:100%;max-height:90vh;border-radius:14px;background:#000;"
-               src="${blobUrl}"></video>
-        <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
-          <button id="closeMediaBtn" style="border:0;border-radius:12px;padding:10px 12px;font-weight:900;cursor:pointer;">
-            Close
-          </button>
-        </div>
-      `);
-    } else if (kind === "audio"){
-      openMediaModal(`
-        <audio controls autoplay style="width:100%;" src="${blobUrl}"></audio>
-        <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
-          <button id="closeMediaBtn" style="border:0;border-radius:12px;padding:10px 12px;font-weight:900;cursor:pointer;">
-            Close
-          </button>
-        </div>
-      `);
-    } else {
-      // fallback open blob in new tab
-      window.open(blobUrl, "_blank", "noopener");
-      return;
-    }
-
-    // wire close button
-    setTimeout(()=>{
-      const btn = document.getElementById("closeMediaBtn");
-      if (btn) btn.onclick = ()=> closeMediaModal(false);
-    }, 0);
-  }
-
 
   // ✅ Register Service Worker (Cache Supabase assets)
   (function registerSW(){
@@ -668,35 +435,6 @@ function showExpiredUI(sid){
         if (!res.ok) throw new Error("Share JSON not found");
 
         const payload = await res.json();
-
-        // ✅ Reduce chance of browser clearing offline cache automatically
-        requestPersistence();
-
-        // ✅ Pre-cache JSON + all media/files right away for true offline mode
-        // After this completes, next opens should NOT hit Supabase at all.
-        const assetUrls = [
-          jsonUrl,
-          ...(Array.isArray(payload.images) ? payload.images : []),
-          ...(Array.isArray(payload.attachments) ? payload.attachments.map(a => a?.src).filter(Boolean) : [])
-        ].filter(Boolean);
-
-        precacheAssets(assetUrls);
-
-        // ✅ ALSO store MP4/MP3 as Blob in IndexedDB for 100% offline playback
-        (async () => {
-          try{
-            const mediaUrls = [
-              ...(Array.isArray(payload.attachments) ? payload.attachments.map(a => a?.src).filter(Boolean) : [])
-            ].filter(u => /\.(mp4|webm|mp3|wav|m4a)(\?|$)/i.test(String(u)));
-
-            // download sequentially to avoid bandwidth spikes
-            for (const u of mediaUrls){
-              try{ await downloadAndStoreBlob(u); }catch(e){}
-            }
-          }catch(e){}
-        })();
-
-
         if (!payload) throw new Error("Invalid JSON payload");
 
         // ✅ Cache shared_by/contact for fallback later
@@ -775,31 +513,11 @@ function showExpiredUI(sid){
             return `
               <div class="att">
                 <div class="name">${name}</div>
-                ${
-                  (/\.(mp4|webm|mp3|wav|m4a)(\?|$)/i.test(src))
-                    ? `<button class="openMediaBtn" data-src="${src}"
-                         style="margin-left:auto;background:#1d4ed8;color:#fff;padding:9px 12px;border-radius:12px;
-                                font-size:13px;border:0;font-weight:900;cursor:pointer;">Play</button>`
-                    : `<a href="${src}" target="_blank" rel="noopener">Open</a>`
-                }
+                <a href="${src}" target="_blank" rel="noopener">Open</a>
               </div>
             `;
           }).join('');
         }
-
-        // ✅ Wire offline media buttons (MP4/MP3)
-        wireMediaViewer();
-        attList.addEventListener('click', (e) => {
-          const btn = e.target && e.target.closest ? e.target.closest(".openMediaBtn") : null;
-          if (!btn) return;
-          const src = btn.getAttribute("data-src");
-          if (!src) return;
-
-          // open from IndexedDB blob (offline-safe)
-          openOfflineMedia(src).catch(() => {
-            alert("This media is not cached yet. Please open once with internet.");
-          });
-        });
 
         // Fullscreen image viewer
         const viewer = document.getElementById('viewer');
