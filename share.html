@@ -511,12 +511,9 @@
     if (kind === "video"){
       openMediaModal(`
         <video controls autoplay playsinline
-               style="width:100%;max-height:78vh;border-radius:14px;background:#000;"
+               style="width:100%;max-height:90vh;border-radius:14px;background:#000;"
                src="${blobUrl}"></video>
         <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
-          <a href="${blobUrl}" download style="background:#111827;color:#fff;padding:10px 12px;border-radius:12px;text-decoration:none;font-weight:900;">
-            Download
-          </a>
           <button id="closeMediaBtn" style="border:0;border-radius:12px;padding:10px 12px;font-weight:900;cursor:pointer;">
             Close
           </button>
@@ -526,9 +523,6 @@
       openMediaModal(`
         <audio controls autoplay style="width:100%;" src="${blobUrl}"></audio>
         <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
-          <a href="${blobUrl}" download style="background:#111827;color:#fff;padding:10px 12px;border-radius:12px;text-decoration:none;font-weight:900;">
-            Download
-          </a>
           <button id="closeMediaBtn" style="border:0;border-radius:12px;padding:10px 12px;font-weight:900;cursor:pointer;">
             Close
           </button>
