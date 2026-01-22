@@ -21,10 +21,10 @@ function isSupabasePublicStorage(url) {
   }
 }
 
-// ✅ Normalize request key so cache works even if URL has query params
+// ✅ Normalize URL: drop query params so cache matches always
 function normalizeUrl(url) {
   const u = new URL(url);
-  return u.origin + u.pathname; // drop ?query
+  return u.origin + u.pathname;
 }
 
 // Optional: limit cache size
@@ -32,19 +32,15 @@ async function trimCache(maxItems = MAX_ITEMS) {
   const cache = await caches.open(CACHE_NAME);
   const keys = await cache.keys();
   if (keys.length <= maxItems) return;
-
   const extra = keys.length - maxItems;
   for (let i = 0; i < extra; i++) await cache.delete(keys[i]);
 }
 
-// ✅ Fetch FULL file (remove Range header)
+// ✅ Fetch FULL file (no Range header) so it can be cached
 async function fetchFull(url) {
   return fetch(url, {
     method: "GET",
-    headers: {
-      // force full response
-      "Accept": "*/*",
-    },
+    headers: { "Accept": "*/*" }
   });
 }
 
@@ -61,7 +57,9 @@ async function serveRange(request, cachedResponse) {
   if (!m) return cachedResponse;
 
   const start = parseInt(m[1], 10);
-  const end = m[2] ? parseInt(m[2], 10) : Math.min(start + 1024 * 1024 - 1, size - 1);
+  const end = m[2]
+    ? parseInt(m[2], 10)
+    : Math.min(start + 1024 * 1024 - 1, size - 1);
 
   const chunk = buf.slice(start, end + 1);
 
@@ -73,7 +71,7 @@ async function serveRange(request, cachedResponse) {
   return new Response(chunk, {
     status: 206,
     statusText: "Partial Content",
-    headers,
+    headers
   });
 }
 
@@ -84,8 +82,7 @@ self.addEventListener("install", () => {
 self.addEventListener("activate", (event) => {
   event.waitUntil((async () => {
     await self.clients.claim();
-
-    // Cleanup old cache versions
+    // cleanup old caches
     const keys = await caches.keys();
     await Promise.all(keys.map(k => (k !== CACHE_NAME ? caches.delete(k) : null)));
   })());
@@ -105,13 +102,11 @@ self.addEventListener("message", (event) => {
     for (const rawUrl of urls) {
       try {
         const url = normalizeUrl(rawUrl);
-
         if (!isSupabasePublicStorage(url)) continue;
 
         const hit = await cache.match(url);
         if (hit) continue;
 
-        // ✅ Fetch full and cache
         const res = await fetchFull(url);
         if (res && res.ok && res.status === 200) {
           await cache.put(url, res.clone());
@@ -124,7 +119,7 @@ self.addEventListener("message", (event) => {
 });
 
 // ===================================================
-// ✅ Fetch handler: CACHE-ONLY after cached
+// ✅ Fetch handler: cache-only after cached
 // ===================================================
 self.addEventListener("fetch", (event) => {
   const req = event.request;
@@ -136,17 +131,16 @@ self.addEventListener("fetch", (event) => {
   event.respondWith((async () => {
     const cache = await caches.open(CACHE_NAME);
 
-    // ✅ 1) Return cache if exists (NO NETWORK)
+    // ✅ 1) CACHE FIRST (no network)
     const cached = await cache.match(cleanUrl);
     if (cached) {
-      // ✅ Handle Range request for mp4/mp3
       if (req.headers.has("range")) {
         return serveRange(req, cached);
       }
       return cached;
     }
 
-    // ✅ 2) Not cached yet: first-time only -> fetch FULL file & store
+    // ✅ 2) FIRST TIME ONLY: fetch full & cache
     try {
       const res = await fetchFull(cleanUrl);
 
@@ -161,7 +155,7 @@ self.addEventListener("fetch", (event) => {
     } catch (e) {
       return new Response("Offline: file not cached yet.", {
         status: 504,
-        statusText: "Gateway Timeout",
+        statusText: "Gateway Timeout"
       });
     }
   })());
