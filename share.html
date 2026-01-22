@@ -256,7 +256,6 @@
 
   <!-- Media Player Modal (MP4/MP3 offline via IndexedDB Blob) -->
   <div class="viewer" id="mediaViewer" style="display:none;">
-    <button class="viewerClose" id="mediaViewerClose">✕</button>
     <div id="mediaViewerBody" style="width:min(100%,720px);">
       <!-- injected -->
     </div>
@@ -497,23 +496,6 @@ function closeMediaModal(fromPopstate = false){
 }
 
 
-function wireMediaViewer(){
-  const closeBtn = document.getElementById("mediaViewerClose");
-  const mv = document.getElementById("mediaViewer");
-
-  if (closeBtn) closeBtn.addEventListener("click", () => closeMediaModal(false));
-
-  if (mv) mv.addEventListener("click", (e)=>{
-    if (e.target === mv) closeMediaModal(false);
-  });
-
-  // ✅ Back button closes Media Viewer (not exit page)
-  window.addEventListener("popstate", () => {
-    if (mediaViewerOpen) {
-      closeMediaModal(true);
-    }
-  });
-}
 
 
   async function openOfflineMedia(url){
