@@ -133,9 +133,7 @@
     .ad-title{font-weight:900;font-size:14px;margin-bottom:4px;}
     .ad-desc{opacity:.75;font-size:13px;line-height:1.35;}
 
-    /* ===================================================
-       ✅ Loader overlay + hide content initially
-       =================================================== */
+    /* Loader */
     #pageLoader{
       position:fixed;
       inset:0;
@@ -165,14 +163,12 @@
 
 <body>
 
-  <!-- ✅ Loader -->
   <div id="pageLoader">
     <div class="loaderSpin"></div>
     <div style="font-weight:900;font-family:system-ui;">Loading property...</div>
     <div style="opacity:.7;font-size:13px;">Please wait</div>
   </div>
 
-  <!-- ✅ Content (hidden until data is ready) -->
   <div id="pageContent">
     <div class="wrap">
       <main class="card">
@@ -185,12 +181,11 @@
 
         <div class="meta">
           <div><strong>Area:</strong> <span id="area"></span></div>
-		  
-		  <div id="sharedByRow" style="display:none;margin-top:7px;">
-			  <strong>Shared By:</strong>
-			  <span id="sharedBy" style="display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap;"></span>
-		  </div>
 
+          <div id="sharedByRow" style="display:none;margin-top:7px;">
+            <strong>Shared By:</strong>
+            <span id="sharedBy" style="display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap;"></span>
+          </div>
         </div>
 
         <section class="sec">
@@ -211,32 +206,26 @@
         </section>
       </main>
 
-      <!-- ✅ Expired UI (hidden by default) -->
-	<section class="sec" id="expiredSec" style="display:none;">
-	  <div class="card" style="padding:14px;border-radius:16px;">
-		
-		<div style="font-weight:900;font-size:16px;margin-bottom:10px;">
-		  This shared link is expired.
-		</div>
+      <section class="sec" id="expiredSec" style="display:none;">
+        <div class="card" style="padding:14px;border-radius:16px;">
+          <div style="font-weight:900;font-size:16px;margin-bottom:10px;">
+            This shared link is expired.
+          </div>
 
-		<!-- ✅ NEW: Title line -->
-		<div id="expiredTitle"
-			 style="margin-top:6px;font-weight:900;font-size:16px;text-transform:capitalize;">
-		</div>
+          <div id="expiredTitle"
+               style="margin-top:6px;font-weight:900;font-size:16px;text-transform:capitalize;">
+          </div>
 
-		<div id="expiredHint" style="opacity:.85;font-size:14px;line-height:1.45;margin-top:10px;">
-		  To get details about the property you can contact:
-		</div>
+          <div id="expiredHint" style="opacity:.85;font-size:14px;line-height:1.45;margin-top:10px;">
+            To get details about the property you can contact:
+          </div>
 
-		<div id="expiredContactRow"
-			 style="margin-top:10px;font-weight:900;font-size:15px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-		</div>
+          <div id="expiredContactRow"
+               style="margin-top:10px;font-weight:900;font-size:15px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          </div>
+        </div>
+      </section>
 
-	  </div>
-	</section>
-
-
-      <!-- ✅ Ad section BELOW the card (not inside it) -->
       <section class="sec" id="adSec">
         <div class="ad-placeholder">
           <div class="ad-badge">Ad</div>
@@ -253,42 +242,33 @@
     <img id="viewerImg" src="" alt="preview"/>
   </div>
 
-
-  <!-- Media Player Modal (MP4/MP3 offline via IndexedDB Blob) -->
+  <!-- Media Modal -->
   <div class="viewer" id="mediaViewer" style="display:none;">
-        <div id="mediaViewerBody" style="width:min(100%,720px);">
-      <!-- injected -->
-    </div>
+    <div id="mediaViewerBody" style="width:min(100%,720px);"></div>
   </div>
 
 <script>
   function qs(k){ return new URLSearchParams(location.search).get(k); }
 
-	function decodeSlug(s){
-	  return String(s || '')
-		.replace(/\+/g, ' ')
-		.trim();
-	}
+  function decodeSlug(s){
+    return String(s || '').replace(/\+/g, ' ').trim();
+  }
 
-	// ✅ Convert slug back to readable text
-	function unslugText(s){
-	  return String(s || '')
-		.replace(/-/g, ' ')       // hyphen → space
-		.replace(/\s{2,}/g, ' ')  // cleanup multiple spaces
-		.trim()
-		.toLowerCase()
-		.replace(/\b\w/g, c => c.toUpperCase()); // ✅ first letter of each word
-	}
+  function unslugText(s){
+    return String(s || '')
+      .replace(/-/g, ' ')
+      .replace(/\s{2,}/g, ' ')
+      .trim()
+      .toLowerCase()
+      .replace(/\b\w/g, c => c.toUpperCase());
+  }
 
-
-	function getUrlContact(){
-	  // ✅ read from URL, not cache
-	  const t = unslugText(decodeSlug(qs('t'))); // title
-	  const n = unslugText(decodeSlug(qs('n'))); // name
-	  const p = decodeSlug(qs('p'));             // phone (DO NOT unslug)
-	  return { title: t, name: n, phone: p };
-	}
-	  
+  function getUrlContact(){
+    const t = unslugText(decodeSlug(qs('t')));
+    const n = unslugText(decodeSlug(qs('n')));
+    const p = decodeSlug(qs('p'));
+    return { title: t, name: n, phone: p };
+  }
 
   function escapeHtml(s){
     return String(s||'')
@@ -301,33 +281,19 @@
 
   function summaryToBullets(summary) {
     let items = [];
+    if (Array.isArray(summary)) items = summary.map(s => String(s));
+    else if (typeof summary === 'string') items = summary.split(/\r?\n/);
+    else if (summary && typeof summary === 'object') items = Object.values(summary).map(v => String(v));
 
-    if (Array.isArray(summary)) {
-      items = summary.map(s => String(s));
-    } else if (typeof summary === 'string') {
-      items = summary.split(/\r?\n/);
-    } else if (summary && typeof summary === 'object') {
-      items = Object.values(summary).map(v => String(v));
-    }
-
-    // cleanup lines
     items = items
-      .map(s => String(s || '')
-        .replace(/\u00A0/g, ' ')
-        .replace(/\t/g, ' ')
-        .trim()
-      )
+      .map(s => String(s || '').replace(/\u00A0/g, ' ').replace(/\t/g, ' ').trim())
       .filter(Boolean)
-      // ✅ remove bullet markers if already present
       .map(s => s.replace(/^[\s•\-\*\u2022]+/, '').trim());
 
     if (!items.length) return '';
-
-    return (
-      `<ul style="margin:0; padding-left:20px; list-style-type:disc;">` +
+    return `<ul style="margin:0; padding-left:20px; list-style-type:disc;">` +
       items.map(line => `<li style="margin:0 0 3px 0;">${escapeHtml(line)}</li>`).join('') +
-      `</ul>`
-    );
+      `</ul>`;
   }
 
   function safeText(v){ return String(v||'').trim(); }
@@ -339,54 +305,20 @@
     if (ct) ct.style.display = "block";
   }
 
-
-  // ===================================================
-  // ✅ Best Offline: ask browser for persistent storage (reduces auto-eviction)
-  // ===================================================
   async function requestPersistence(){
     try{
       if (navigator.storage && navigator.storage.persist){
-        const persisted = await navigator.storage.persist();
-        return persisted;
+        await navigator.storage.persist();
       }
-    }catch(e){}
-    return false;
-  }
-
-  // ===================================================
-  // ✅ Best Offline: Pre-cache ALL assets (JSON + images + attachments)
-  // This ensures 2nd open onward hits NO Supabase requests.
-  // ===================================================
-  async function precacheAssets(urls){
-    try{
-      if (!('serviceWorker' in navigator)) return;
-
-      // wait SW ready
-      await navigator.serviceWorker.ready;
-
-      // If SW isn't controlling yet (first install), reload once so it controls.
-      if (!navigator.serviceWorker.controller){
-        location.reload();
-        return;
-      }
-
-      navigator.serviceWorker.controller.postMessage({
-        type: "PRECACHE_ASSETS",
-        urls: urls
-      });
     }catch(e){}
   }
 
-  // ===================================================
-  // ✅ IndexedDB Media Store: best offline for MP4/MP3
-  // ===================================================
   const MEDIA_DB = "propcola_share_media_v1";
   const MEDIA_STORE = "files";
 
   function normalizeMediaKey(url){
     try{
       const u = new URL(url);
-      // keep pathname only (ignore query), consistent key
       return u.origin + u.pathname;
     }catch(e){
       return String(url || '');
@@ -480,12 +412,10 @@
   }
 
   function wireMediaViewer(){
-    const closeBtn = document.getElementById("mediaViewerClose");
     const mv = document.getElementById("mediaViewer");
-    if (closeBtn) closeBtn.addEventListener("click", ()=>closeMediaModal(false));
     if (mv) mv.addEventListener("click", (e)=>{ if (e.target === mv) closeMediaModal(false); });
 
-    window.addEventListener("popstate", (e)=>{
+    window.addEventListener("popstate", ()=>{
       const mv2 = document.getElementById("mediaViewer");
       if (mv2 && mv2.style.display === "grid"){
         closeMediaModal(true);
@@ -495,11 +425,7 @@
 
   async function openOfflineMedia(url){
     const key = normalizeMediaKey(url);
-
-    // 1) try IDB cache first
     let obj = await idbGet(key);
-
-    // 2) if not cached, download now (online only)
     if (!obj || !obj.blob){
       obj = await downloadAndStoreBlob(url);
     }
@@ -513,38 +439,29 @@
                style="width:100%;max-height:78vh;border-radius:14px;background:#000;"
                src="${blobUrl}"></video>
         <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
-          <button id="closeMediaBtn" style="border:0;border-radius:12px;padding:10px 12px;font-weight:900;cursor:pointer;">
-            Close
-          </button>
+          <button id="closeMediaBtn" style="border:0;border-radius:12px;padding:10px 12px;font-weight:900;cursor:pointer;">Close</button>
         </div>
       `);
     } else if (kind === "audio"){
       openMediaModal(`
         <audio controls autoplay style="width:100%;" src="${blobUrl}"></audio>
         <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
-          <a href="${blobUrl}" download style="background:#111827;color:#fff;padding:10px 12px;border-radius:12px;text-decoration:none;font-weight:900;">
-            Download
-          </a>
-          <button id="closeMediaBtn" style="border:0;border-radius:12px;padding:10px 12px;font-weight:900;cursor:pointer;">
-            Close
-          </button>
+          <a href="${blobUrl}" download style="background:#111827;color:#fff;padding:10px 12px;border-radius:12px;text-decoration:none;font-weight:900;">Download</a>
+          <button id="closeMediaBtn" style="border:0;border-radius:12px;padding:10px 12px;font-weight:900;cursor:pointer;">Close</button>
         </div>
       `);
     } else {
-      // fallback open blob in new tab
       window.open(blobUrl, "_blank", "noopener");
       return;
     }
 
-    // wire close button
     setTimeout(()=>{
       const btn = document.getElementById("closeMediaBtn");
       if (btn) btn.onclick = ()=> closeMediaModal(false);
     }, 0);
   }
 
-
-  // ✅ Register Service Worker (Cache Supabase assets)
+  // ✅ Register SW (shell only)
   (function registerSW(){
     try{
       if (!('serviceWorker' in navigator)) return;
@@ -553,9 +470,6 @@
     }catch(e){}
   })();
 
-  // ===================================================
-  // ✅ Cache shared_by/contact so expired link can show fallback
-  // ===================================================
   function cacheShareContact(sid, payload){
     try{
       const obj = {
@@ -567,71 +481,6 @@
     }catch(e){}
   }
 
-  function getCachedShareContact(sid){
-    try{
-      const raw = localStorage.getItem(`share_contact_${sid}`);
-      if (!raw) return null;
-      return JSON.parse(raw);
-    }catch(e){ return null; }
-  }
-
-function showExpiredUI(sid){
-  // ✅ hide main property card fully
-  const cardBlock = document.querySelector('main.card');
-  if (cardBlock) cardBlock.style.display = 'none';
-
-  // ✅ show expired section
-  const expiredSec = document.getElementById('expiredSec');
-  const expiredTitle = document.getElementById('expiredTitle');
-  const expiredContactRow = document.getElementById('expiredContactRow');
-
-
-  if (expiredSec) expiredSec.style.display = 'block';
-
-  // ✅ Take from URL params (title + name + phone)
-  const fromUrl = getUrlContact();
-  const title = safeText(fromUrl.title);
-  const name = safeText(fromUrl.name);
-  const phone = safeText(fromUrl.phone);
-
-  // ✅ Show title
-  if (expiredTitle) {
-    expiredTitle.textContent = title ? `Title: ${title}` : '';
-  }
-
-  // ✅ Show name/phone
-	if (expiredContactRow) {
-	  if (name || phone) {
-		expiredContactRow.innerHTML = `
-		  <span>${escapeHtml(name || 'Shared By')}</span>
-		  ${phone ? `<span style="opacity:0.7;"> - </span><span style="font-weight:800;">${escapeHtml(phone)}</span>` : ''}
-		  ${
-			phone
-			  ? `<a
-				   href="tel:${escapeHtml(String(phone).trim())}"
-				   title="Call"
-				   style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;"
-				 >
-				   <i class="fa fa-phone" style="color:green;font-size:18px;"></i>
-				 </a>`
-			  : ``
-		  }
-		`;
-	  } else {
-		expiredContactRow.textContent = 'Contact information not available.';
-	  }
-	}
-
-
-  // ✅ show page even in expired mode so Ad remains visible
-  showContent();
-}
-
-
-
-  // ===================================================
-  // ✅ Save payload locally so JSON/text renders offline even if fetch fails
-  // ===================================================
   function saveSharePayload(sid, payload){
     try{
       localStorage.setItem(`share_payload_${sid}`, JSON.stringify({ payload, t: Date.now() }));
@@ -647,6 +496,178 @@ function showExpiredUI(sid){
     }catch(e){ return null; }
   }
 
+  function showExpiredUI(sid){
+    const cardBlock = document.querySelector('main.card');
+    if (cardBlock) cardBlock.style.display = 'none';
+
+    const expiredSec = document.getElementById('expiredSec');
+    const expiredTitle = document.getElementById('expiredTitle');
+    const expiredContactRow = document.getElementById('expiredContactRow');
+
+    if (expiredSec) expiredSec.style.display = 'block';
+
+    const fromUrl = getUrlContact();
+    const title = safeText(fromUrl.title);
+    const name = safeText(fromUrl.name);
+    const phone = safeText(fromUrl.phone);
+
+    if (expiredTitle) expiredTitle.textContent = title ? `Title: ${title}` : '';
+
+    if (expiredContactRow) {
+      if (name || phone) {
+        expiredContactRow.innerHTML = `
+          <span>${escapeHtml(name || 'Shared By')}</span>
+          ${phone ? `<span style="opacity:0.7;"> - </span><span style="font-weight:800;">${escapeHtml(phone)}</span>` : ''}
+          ${
+            phone
+              ? `<a href="tel:${escapeHtml(String(phone).trim())}" title="Call"
+                   style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">
+                   <i class="fa fa-phone" style="color:green;font-size:18px;"></i>
+                 </a>`
+              : ``
+          }
+        `;
+      } else {
+        expiredContactRow.textContent = 'Contact information not available.';
+      }
+    }
+
+    showContent();
+  }
+
+  // ============================================================
+  // ✅ FIX: renderFromPayload added (offline-first requires this)
+  // ============================================================
+  function renderFromPayload(payload){
+    document.getElementById('title').textContent = safeText(payload.title);
+    document.getElementById('area').textContent  = safeText(payload.area);
+    document.getElementById('summary').innerHTML = summaryToBullets(payload.summary);
+
+    // Shared By
+    const sb = safeText(payload.shared_by);
+    const sc = safeText(payload.shared_contact);
+    const sharedByRow = document.getElementById('sharedByRow');
+    const sharedBy = document.getElementById('sharedBy');
+
+    if ((sb || sc) && sharedByRow && sharedBy) {
+      sharedByRow.style.display = "block";
+      sharedBy.innerHTML = `
+        <span style="font-weight:500;">${escapeHtml(sb || 'N/A')}</span>
+        ${sc ? `<span style="opacity:0.7;"> - </span><span>${escapeHtml(sc)}</span>` : ''}
+        ${
+          sc
+            ? `<a href="tel:${escapeHtml(String(sc).trim())}" title="Call Publisher"
+                 style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;margin-left:10px;">
+                 <i class="fa fa-phone" style="color:green;font-size:18px;"></i>
+               </a>`
+            : ``
+        }
+      `;
+    }
+
+    // Pills
+    const type = safeText(payload.type);
+    const cat  = safeText(payload.category);
+    const typePill = document.getElementById('typePill');
+    const catPill  = document.getElementById('catPill');
+    if (type) { typePill.textContent = type; typePill.style.display = "inline-flex"; }
+    if (cat)  { catPill.textContent  = cat;  catPill.style.display  = "inline-flex"; }
+
+    // Images
+    const imgs = Array.isArray(payload.images) ? payload.images : [];
+    const imgSec  = document.getElementById('imgSec');
+    const imgGrid = document.getElementById('imgGrid');
+
+    if (!imgs.length){
+      if (imgSec) imgSec.style.display = "none";
+    } else {
+      if (imgSec) imgSec.style.display = "block";
+      imgGrid.innerHTML = imgs.map(src =>
+        `<img src="${escapeHtml(src)}" data-src="${escapeHtml(src)}" alt="image">`
+      ).join('');
+    }
+
+    // Attachments
+    const atts = Array.isArray(payload.attachments) ? payload.attachments : [];
+    const attSec  = document.getElementById('attSec');
+    const attList = document.getElementById('attList');
+
+    if (!atts.length){
+      if (attSec) attSec.style.display = "none";
+    } else {
+      if (attSec) attSec.style.display = "block";
+      attList.innerHTML = atts.map((a, idx) => {
+        const name = escapeHtml(a?.name || ("Attachment " + (idx+1)));
+        const src  = escapeHtml(a?.src || "");
+        return `
+          <div class="att">
+            <div class="name">${name}</div>
+            ${
+              (/\.(mp4|webm|mp3|wav|m4a)(\?|$)/i.test(src))
+                ? `<button class="openMediaBtn" data-src="${src}"
+                     style="margin-left:auto;background:#1d4ed8;color:#fff;padding:9px 12px;border-radius:12px;
+                            font-size:13px;border:0;font-weight:900;cursor:pointer;">Play</button>`
+                : `<a href="${src}" target="_blank" rel="noopener">Open</a>`
+            }
+          </div>
+        `;
+      }).join('');
+    }
+
+    // wire media buttons
+    wireMediaViewer();
+    if (attList){
+      attList.onclick = (e) => {
+        const btn = e.target && e.target.closest ? e.target.closest(".openMediaBtn") : null;
+        if (!btn) return;
+        const src = btn.getAttribute("data-src");
+        if (src) openOfflineMedia(src).catch(()=>alert("Media not cached yet."));
+      };
+    }
+
+    // Fullscreen image viewer wiring
+    const viewer = document.getElementById('viewer');
+    const viewerImg = document.getElementById('viewerImg');
+    const viewerClose = document.getElementById('viewerClose');
+    let viewerOpen = false;
+
+    imgGrid.onclick = (e) => {
+      const t = e.target;
+      if (!t || t.tagName !== "IMG") return;
+      const src = t.getAttribute("data-src") || t.getAttribute("src");
+      if (!src) return;
+
+      viewerImg.src = src;
+      viewer.style.display = "grid";
+
+      if (!viewerOpen) {
+        viewerOpen = true;
+        history.pushState({ viewer: true }, "");
+      }
+    };
+
+    function closeViewer(fromPopstate = false){
+      viewer.style.display = "none";
+      viewerImg.src = "";
+      if (viewerOpen && !fromPopstate) {
+        viewerOpen = false;
+        history.back();
+      } else {
+        viewerOpen = false;
+      }
+    }
+
+    window.onpopstate = () => {
+      if (viewerOpen) closeViewer(true);
+    };
+
+    viewerClose.onclick = closeViewer;
+    viewer.onclick = (e) => { if (e.target === viewer) closeViewer(); };
+  }
+
+  // ============================================================
+  // ✅ MAIN INIT
+  // ============================================================
   (function init(){
     const sid = String(qs('sid') || '').trim();
 
@@ -657,280 +678,54 @@ function showExpiredUI(sid){
 
     (async function(){
       try{
+        // ✅ OFFLINE-FIRST: if cached, never hit Supabase
+        const cachedPayload = loadSharePayload(sid);
+        if (cachedPayload) {
+          renderFromPayload(cachedPayload);
+          showContent();
+          return;
+        }
+
         const jsonFile = `share_${encodeURIComponent(sid)}.json`;
+        const jsonUrl = `https://mxuknvleveqqybhbhwnv.supabase.co/storage/v1/object/public/shares/${encodeURIComponent(jsonFile)}`;
 
-        const jsonUrl =
-          `https://mxuknvleveqqybhbhwnv.supabase.co/storage/v1/object/public/shares/${encodeURIComponent(jsonFile)}`;
-
-        // ✅ DO NOT use no-store, allow SW + browser caching
         const res = await fetch(jsonUrl);
         if (!res.ok) throw new Error("Share JSON not found");
 
         const payload = await res.json();
+        if (!payload) throw new Error("Invalid JSON payload");
 
-        // ✅ Reduce chance of browser clearing offline cache automatically
         requestPersistence();
 
-        // ✅ Pre-cache JSON + all media/files right away for true offline mode
-        // After this completes, next opens should NOT hit Supabase at all.
-        const assetUrls = [
-          jsonUrl,
-          ...(Array.isArray(payload.images) ? payload.images : []),
-          ...(Array.isArray(payload.attachments) ? payload.attachments.map(a => a?.src).filter(Boolean) : [])
-        ].filter(Boolean);
+        // ✅ Cache payload for offline-first
+        saveSharePayload(sid, payload);
+        cacheShareContact(sid, payload);
 
-        precacheAssets(assetUrls);
-
-        // ✅ ALSO store MP4/MP3 as Blob in IndexedDB for 100% offline playback
+        // ✅ Store MP4/MP3 in IndexedDB (do not render anything here)
         (async () => {
           try{
             const mediaUrls = [
               ...(Array.isArray(payload.attachments) ? payload.attachments.map(a => a?.src).filter(Boolean) : [])
             ].filter(u => /\.(mp4|webm|mp3|wav|m4a)(\?|$)/i.test(String(u)));
 
-            // download sequentially to avoid bandwidth spikes
             for (const u of mediaUrls){
               try{ await downloadAndStoreBlob(u); }catch(e){}
             }
-          }catch(e){
-        // ✅ Offline fallback: render from last cached payload instead of showing expired
-        try{
-          const cachedPayload = loadSharePayload(sid);
-          if (cachedPayload){
-            // render using same flow by simulating payload path
-            document.getElementById('pageLoader').style.display = "none";
-            // reuse existing render logic below by quick inline render (minimal)
-            // Note: we call init again style block already exists; simplest is reload with cached content:
-            // We'll set a flag and render basic fields.
-            const payload = cachedPayload;
-
-            // Pills + render UI
-            document.getElementById('title').textContent = safeText(payload.title);
-            document.getElementById('area').textContent  = safeText(payload.area);
-            document.getElementById('summary').innerHTML = summaryToBullets(payload.summary);
-
-            const type = safeText(payload.type);
-            const cat  = safeText(payload.category);
-            const typePill = document.getElementById('typePill');
-            const catPill  = document.getElementById('catPill');
-            if (type) { typePill.textContent = type; typePill.style.display = "inline-flex"; }
-            if (cat)  { catPill.textContent  = cat;  catPill.style.display  = "inline-flex"; }
-
-            const imgs = Array.isArray(payload.images) ? payload.images : [];
-            const imgSec  = document.getElementById('imgSec');
-            const imgGrid = document.getElementById('imgGrid');
-            if (!imgs.length){
-              if (imgSec) imgSec.style.display = "none";
-            } else {
-              if (imgSec) imgSec.style.display = "block";
-              imgGrid.innerHTML = imgs.map(src => `<img src="${escapeHtml(src)}" data-src="${escapeHtml(src)}" alt="image">`).join('');
-            }
-
-            const atts = Array.isArray(payload.attachments) ? payload.attachments : [];
-            const attSec  = document.getElementById('attSec');
-            const attList = document.getElementById('attList');
-            if (!atts.length){
-              if (attSec) attSec.style.display = "none";
-            } else {
-              if (attSec) attSec.style.display = "block";
-              attList.innerHTML = atts.map((a, idx) => {
-                const name = escapeHtml(a?.name || ("Attachment " + (idx+1)));
-                const src  = escapeHtml(a?.src || "");
-                return `
-                  <div class="att">
-                    <div class="name">${name}</div>
-                    ${
-                      (/\.(mp4|webm|mp3|wav|m4a)(\?|$)/i.test(src))
-                        ? `<button class="openMediaBtn" data-src="${src}"
-                             style="margin-left:auto;background:#1d4ed8;color:#fff;padding:9px 12px;border-radius:12px;
-                                    font-size:13px;border:0;font-weight:900;cursor:pointer;">Play</button>`
-                        : `<a href="${src}" target="_blank" rel="noopener">Open</a>`
-                    }
-                  </div>
-                `;
-              }).join('');
-            }
-
-            // Wire media buttons
-            wireMediaViewer();
-            attList.addEventListener('click', (ev) => {
-              const btn = ev.target && ev.target.closest ? ev.target.closest(".openMediaBtn") : null;
-              if (!btn) return;
-              const src = btn.getAttribute("data-src");
-              if (src) openOfflineMedia(src).catch(()=>alert("Media not cached yet."));
-            });
-
-            // Fullscreen viewer already wired in original code (may not run here), but ok
-            showContent();
-            return;
-          }
-        }catch(_){}
-}
+          }catch(e){}
         })();
 
-
-        if (!payload) throw new Error("Invalid JSON payload");
-
-        // ✅ Cache payload + shared_by/contact for full offline fallback
-        saveSharePayload(sid, payload);
-        cacheShareContact(sid, payload);
-
-        // ✅ Render UI
-        document.getElementById('title').textContent = safeText(payload.title);
-        document.getElementById('area').textContent  = safeText(payload.area);
-        document.getElementById('summary').innerHTML = summaryToBullets(payload.summary);
-
-		// Shared By
-		const sb = safeText(payload.shared_by);
-		const sc = safeText(payload.shared_contact);
-		const sharedByRow = document.getElementById('sharedByRow');
-		const sharedBy = document.getElementById('sharedBy');
-
-		if ((sb || sc) && sharedByRow && sharedBy) {
-		  sharedByRow.style.display = "block";
-
-		  // ✅ Reuse Favorites logic: show phone icon only if contact exists
-		  sharedBy.innerHTML = `
-			<span style="font-weight:500;">${escapeHtml(sb || 'N/A')}</span>
-			${sc ? `<span style="opacity:0.7;"> - </span><span>${escapeHtml(sc)}</span>` : ''}
-			${
-			  sc
-				? `<a
-					 href="tel:${escapeHtml(String(sc).trim())}"
-					 title="Call Publisher"
-					 style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;
-							margin-left:10px;"
-				   >
-					 <i class="fa fa-phone" style="color:green;font-size:18px;"></i>
-				   </a>`
-				: ``
-			}
-		  `;
-		}
-
-
-        // Pills
-        const type = safeText(payload.type);
-        const cat  = safeText(payload.category);
-
-        const typePill = document.getElementById('typePill');
-        const catPill  = document.getElementById('catPill');
-
-        if (type) { typePill.textContent = type; typePill.style.display = "inline-flex"; }
-        if (cat)  { catPill.textContent  = cat;  catPill.style.display  = "inline-flex"; }
-
-        // Images
-        const imgs = Array.isArray(payload.images) ? payload.images : [];
-        const imgSec  = document.getElementById('imgSec');
-        const imgGrid = document.getElementById('imgGrid');
-
-        if (!imgs.length){
-          if (imgSec) imgSec.style.display = "none";
-        } else {
-          if (imgSec) imgSec.style.display = "block";
-          imgGrid.innerHTML = imgs.map(src =>
-            `<img src="${escapeHtml(src)}" data-src="${escapeHtml(src)}" alt="image">`
-          ).join('');
-        }
-
-        // Attachments
-        const atts = Array.isArray(payload.attachments) ? payload.attachments : [];
-        const attSec  = document.getElementById('attSec');
-        const attList = document.getElementById('attList');
-
-        if (!atts.length){
-          if (attSec) attSec.style.display = "none";
-        } else {
-          if (attSec) attSec.style.display = "block";
-          attList.innerHTML = atts.map((a, idx) => {
-            const name = escapeHtml(a?.name || ("Attachment " + (idx+1)));
-            const src  = escapeHtml(a?.src || "");
-            return `
-              <div class="att">
-                <div class="name">${name}</div>
-                ${
-                  (/\.(mp4|webm|mp3|wav|m4a)(\?|$)/i.test(src))
-                    ? `<button class="openMediaBtn" data-src="${src}"
-                         style="margin-left:auto;background:#1d4ed8;color:#fff;padding:9px 12px;border-radius:12px;
-                                font-size:13px;border:0;font-weight:900;cursor:pointer;">Play</button>`
-                    : `<a href="${src}" target="_blank" rel="noopener">Open</a>`
-                }
-              </div>
-            `;
-          }).join('');
-        }
-
-        // ✅ Wire offline media buttons (MP4/MP3)
-        wireMediaViewer();
-        attList.addEventListener('click', (e) => {
-          const btn = e.target && e.target.closest ? e.target.closest(".openMediaBtn") : null;
-          if (!btn) return;
-          const src = btn.getAttribute("data-src");
-          if (!src) return;
-
-          // open from IndexedDB blob (offline-safe)
-          openOfflineMedia(src).catch(() => {
-            alert("This media is not cached yet. Please open once with internet.");
-          });
-        });
-
-        // Fullscreen image viewer
-        const viewer = document.getElementById('viewer');
-        const viewerImg = document.getElementById('viewerImg');
-        const viewerClose = document.getElementById('viewerClose');
-
-        let viewerOpen = false;
-
-        imgGrid.addEventListener('click', (e) => {
-          const t = e.target;
-          if (!t || t.tagName !== "IMG") return;
-
-          const src = t.getAttribute("data-src") || t.getAttribute("src");
-          if (!src) return;
-
-          viewerImg.src = src;
-          viewer.style.display = "grid";
-
-          // ✅ Push a history entry so Back button closes viewer first
-          if (!viewerOpen) {
-            viewerOpen = true;
-            history.pushState({ viewer: true }, "");
-          }
-        });
-
-        function closeViewer(fromPopstate = false){
-          viewer.style.display = "none";
-          viewerImg.src = "";
-
-          // ✅ If user closed by ✕ button, remove viewer history state
-          if (viewerOpen && !fromPopstate) {
-            viewerOpen = false;
-            history.back();
-          } else {
-            viewerOpen = false;
-          }
-        }
-
-        window.addEventListener('popstate', (event) => {
-          if (viewerOpen) {
-            // ✅ Back button should close viewer, not exit page
-            closeViewer(true);
-          }
-        });
-
-        viewerClose.addEventListener('click', closeViewer);
-        viewer.addEventListener('click', (e) => {
-          if (e.target === viewer) closeViewer();
-        });
-
-        // ✅ Show page only AFTER everything is ready
+        // ✅ render
+        renderFromPayload(payload);
         showContent();
 
       }catch(e){
-        const ld = document.getElementById('pageLoader');
-        if (ld) ld.style.display = "none";
-
-        // ✅ show expired UI (keeps Ad section visible)
+        // ✅ fallback: if cached exists use it
+        const cachedPayload = loadSharePayload(sid);
+        if (cachedPayload) {
+          renderFromPayload(cachedPayload);
+          showContent();
+          return;
+        }
         showExpiredUI(sid);
       }
     })();

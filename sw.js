@@ -6,7 +6,7 @@
    - All content (JSON/images/pdf/mp4/mp3) is handled by IndexedDB in share_everything_indexeddb.html
 */
 
-const CACHE_NAME = "propcola-shell-v4";
+const CACHE_NAME = "propcola-shell-v5";
 const CORE_URLS = [
   "./share.html",
   "./",
