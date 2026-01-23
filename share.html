@@ -254,17 +254,6 @@
     </div>
   </div>
 
-  <!-- PDF Viewer Modal -->
-  <div class="viewer" id="pdfViewer" style="display:none;">
-    <div style="width:min(100%,900px);height:90vh;background:#fff;border-radius:14px;overflow:hidden;">
-      <iframe id="pdfFrame" src="" style="width:100%;height:100%;border:0;"></iframe>
-      <div style="padding:10px;display:flex;gap:10px;justify-content:flex-end;background:#f8fafc;border-top:1px solid #e5e7eb;">
-        <button id="closePdfBtn" style="border:0;border-radius:12px;padding:10px 12px;font-weight:900;cursor:pointer;">
-          Close
-        </button>
-      </div>
-    </div>
-  </div>
 
 <script>
   function qs(k){ return new URLSearchParams(location.search).get(k); }
@@ -408,7 +397,6 @@
   function guessExtType(url, mime){
     const u = String(url || '').toLowerCase();
     if (mime && mime.startsWith("image/")) return "image";
-    if (mime === "application/pdf") return "pdf";
 
     if (/\.(png|jpg|jpeg|webp|gif)(\?|$)/i.test(u)) return "image";
     if (/\.(pdf)(\?|$)/i.test(u)) return "pdf";
@@ -511,56 +499,6 @@
       if (btn) btn.onclick = ()=> closeMediaModal(false);
     }, 0);
   }
-
-  // =========================================
-  // PDF Modal
-  // =========================================
-  let pdfOpen = false;
-
-  function openPdfModal(blobUrl){
-    const pv = document.getElementById("pdfViewer");
-    const frame = document.getElementById("pdfFrame");
-    if (!pv || !frame) return;
-
-    frame.src = blobUrl;
-    pv.style.display = "grid";
-
-    if (!pdfOpen){
-      pdfOpen = true;
-      history.pushState({ pdfViewer:true }, "");
-    }
-  }
-
-  function closePdfModal(fromPop=false){
-    const pv = document.getElementById("pdfViewer");
-    const frame = document.getElementById("pdfFrame");
-    if (!pv || !frame) return;
-
-    pv.style.display = "none";
-    frame.src = "";
-
-    if (pdfOpen && !fromPop){
-      pdfOpen = false;
-      history.back();
-    } else {
-      pdfOpen = false;
-    }
-  }
-
-  (function wirePdfViewer(){
-    const pv = document.getElementById("pdfViewer");
-    const closeBtn = document.getElementById("closePdfBtn");
-
-    if (closeBtn) closeBtn.onclick = ()=> closePdfModal(false);
-
-    if (pv) pv.addEventListener("click", (e)=>{
-      if (e.target === pv) closePdfModal(false);
-    });
-
-    window.addEventListener("popstate", ()=>{
-      if (pdfOpen) closePdfModal(true);
-    });
-  })();
 
   // Register Service Worker (optional but fine)
   (function registerSW(){
@@ -757,12 +695,6 @@
 
         try{
           const { blobUrl, mime } = await getOrDownloadBlobUrl(src);
-          const kind = guessExtType(src, mime);
-
-          if (kind === "pdf"){
-            openPdfModal(blobUrl);
-            return;
-          }
 
           window.open(blobUrl, "_blank", "noopener");
         }catch(err){
