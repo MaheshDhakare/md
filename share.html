@@ -571,13 +571,26 @@
           <span>${escapeHtml(name || 'Shared By')}</span>
           ${phone ? `<span style="opacity:0.7;"> - </span><span style="font-weight:800;">${escapeHtml(phone)}</span>` : ''}
           ${
-            phone
-              ? `<a href="tel:${escapeHtml(String(phone).trim())}"
-                   title="Call"
-                   style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">
-                   <i class="fa fa-phone" style="color:green;font-size:18px;"></i>
-                 </a>`
-              : ``
+			phone
+			  ? `
+				<!-- 📞 CALL -->
+				<a href="tel:${escapeHtml(String(phone).trim())}"
+				   title="Call"
+				   style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">
+				  <i class="fa fa-phone" style="color:green;font-size:18px;"></i>
+				</a>
+
+				<!-- 🟢 WHATSAPP -->
+				<a href="https://wa.me/${escapeHtml(String(phone).trim().replace(/[^\d]/g,''))}"
+				   target="_blank"
+				   title="WhatsApp"
+				   style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;margin-left:12px;">
+				  <i class="fa-brands fa-whatsapp"
+					 style="color:#25D366;font-size:18px;"></i>
+				</a>
+			  `
+			  : ``
+
           }
         `;
       } else {
@@ -619,19 +632,33 @@
 
     if ((sb || sc) && sharedByRow && sharedBy) {
       sharedByRow.style.display = "block";
-      sharedBy.innerHTML = `
-        <span style="font-weight:500;">${escapeHtml(sb || 'N/A')}</span>
-        ${sc ? `<span style="opacity:0.7;"> - </span><span>${escapeHtml(sc)}</span>` : ''}
-        ${
-          sc
-            ? `<a href="tel:${escapeHtml(String(sc).trim())}"
-                 title="Call Publisher"
-                 style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;margin-left:10px;">
-                 <i class="fa fa-phone" style="color:green;font-size:18px;"></i>
-               </a>`
-            : ``
-        }
-      `;
+		sharedBy.innerHTML = `
+		  <span style="font-weight:500;">${escapeHtml(sb || 'N/A')}</span>
+		  ${sc ? `<span style="opacity:0.7;"> - </span><span>${escapeHtml(sc)}</span>` : ''}
+
+		  ${
+			sc
+			  ? `
+				<!-- 📞 CALL -->
+				<a href="tel:${escapeHtml(String(sc).trim())}"
+				   title="Call Publisher"
+				   style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;margin-left:10px;">
+				  <i class="fa fa-phone" style="color:green;font-size:18px;"></i>
+				</a>
+
+				<!-- 🟢 WHATSAPP -->
+				<a href="https://wa.me/${escapeHtml(String(sc).trim().replace(/[^\d]/g,''))}"
+				   target="_blank"
+				   title="WhatsApp Publisher"
+				   style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;margin-left:12px;">
+				  <i class="fa-brands fa-whatsapp"
+					 style="color:#25D366;font-size:18px;"></i>
+				</a>
+			  `
+			  : ``
+		  }
+		`;
+
     }
 
     // Pills

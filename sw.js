@@ -15,8 +15,15 @@ const CORE_URLS = [
   SHELL_URL,
   new URL("./", self.location.href).toString(),
   new URL("./sw.js", self.location.href).toString(),
-  "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+
+  // FontAwesome CSS
+  "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css",
+
+  // FontAwesome fonts (brands + solid)
+  "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/webfonts/fa-brands-400.woff2",
+  "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/webfonts/fa-solid-900.woff2"
 ];
+
 
 self.addEventListener("install", (event) => {
   event.waitUntil((async () => {
@@ -64,11 +71,15 @@ self.addEventListener("fetch", (event) => {
   }
 
   // ✅ Cache-first for FontAwesome CSS + Fonts
-  const isFA =
-    req.method === "GET" &&
-    (req.url.includes("cdnjs.cloudflare.com/ajax/libs/font-awesome/") ||
-     req.url.includes("cdnjs.cloudflare.com/ajax/libs/font-awesome/") ||
-     req.url.includes("/webfonts/"));
+	const isFA =
+	  req.method === "GET" &&
+	  (
+		req.url.includes("cdnjs.cloudflare.com/ajax/libs/font-awesome/") ||
+		req.url.includes("use.fontawesome.com/") ||
+		req.url.includes("/webfonts/") ||
+		req.destination === "font"
+	  );
+
 
   if (isFA) {
     event.respondWith((async () => {
