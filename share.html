@@ -195,8 +195,9 @@
   <!-- Loader -->
   <div id="pageLoader">
     <div class="loaderSpin"></div>
-    <div style="font-weight:900;font-family:system-ui;">Loading property...</div>
-    <div style="opacity:.7;font-size:13px;">Please wait</div>
+	<div id="loaderTitle" style="font-weight:900;font-family:system-ui;">Loading property...</div>
+	<div id="loaderSub" style="opacity:.7;font-size:13px;">Please wait</div>
+	
   </div>
 
   <!-- Content -->
@@ -683,18 +684,22 @@
       ).join('');
 
       // Load blob URLs (no Supabase URL shown)
-      setTimeout(async ()=>{
-        const list = imgGrid.querySelectorAll("img[data-src]");
-        for (const im of list){
-          const src = im.getAttribute("data-src");
-          if (!src) continue;
-          try{
-            const { blobUrl } = await getOrDownloadBlobUrl(src);
-            im.src = blobUrl;
-            im.setAttribute("data-blob", blobUrl);
-          }catch(e){}
-        }
-      },0);
+		const list = imgGrid.querySelectorAll("img[data-src]");
+		for (const im of list){
+		  const src = im.getAttribute("data-src");
+		  if (!src) continue;
+
+		  try{
+			const key = normalizeMediaKey(src);
+			const obj = await idbGet(key);
+			if (obj && obj.blob){
+			  const blobUrl = URL.createObjectURL(obj.blob);
+			  im.src = blobUrl;
+			  im.setAttribute("data-blob", blobUrl);
+			}
+		  }catch(e){}
+		}
+
     }
 
     // Attachments
@@ -811,63 +816,81 @@
       return;
     }
 
-    (async function(){
-      try{
-        // OFFLINE-FIRST: render cached payload immediately
-        const cachedPayload = loadSharePayload(sid);
-        if (cachedPayload){
-          await renderFromPayload(cachedPayload);
-          showContent();
-          return;
-        }
+(async function(){
+  try{
 
-        const jsonFile = `share_${encodeURIComponent(sid)}.json`;
-        const jsonUrl = `https://mxuknvleveqqybhbhwnv.supabase.co/storage/v1/object/public/shares/${encodeURIComponent(jsonFile)}`;
+    let payload;
 
-        const res = await fetch(jsonUrl);
-        if (!res.ok) throw new Error("Share JSON not found");
+    // 1️⃣ Try cache first
+    const cachedPayload = loadSharePayload(sid);
 
-        const payload = await res.json();
+    if (cachedPayload) {
+      payload = cachedPayload;
+    } else {
+      // 2️⃣ Fetch from network
+      const jsonFile = `share_${encodeURIComponent(sid)}.json`;
+      const jsonUrl = `https://mxuknvleveqqybhbhwnv.supabase.co/storage/v1/object/public/shares/${encodeURIComponent(jsonFile)}`;
 
-        requestPersistence();
+      const res = await fetch(jsonUrl);
+      if (!res.ok) throw new Error("Share JSON not found");
 
-        // Cache payload + shared info
-        saveSharePayload(sid, payload);
-        cacheShareContact(sid, payload);
+      payload = await res.json();
 
-        // Cache EVERYTHING to IDB:
-        // images + attachments (pdf/video/audio/images)
-        (async () => {
-          try{
-            const urls = [
-              ...(Array.isArray(payload.images) ? payload.images : []),
-              ...(Array.isArray(payload.attachments) ? payload.attachments.map(a => a?.src).filter(Boolean) : [])
-            ].filter(Boolean);
+      requestPersistence();
 
-            const filtered = urls.filter(u =>
-              /\.(mp4|webm|mp3|wav|m4a|pdf|png|jpg|jpeg|webp|gif)(\?|$)/i.test(String(u))
-            );
+      saveSharePayload(sid, payload);
+      cacheShareContact(sid, payload);
+    }
 
-            for (const u of filtered){
-              try{ await downloadAndStoreBlob(u); }catch(e){}
-            }
-          }catch(e){}
-        })();
+    // 3️⃣ Cache ALL media before rendering
+    const urls = [
+      ...(Array.isArray(payload.images) ? payload.images : []),
+      ...(Array.isArray(payload.attachments)
+          ? payload.attachments.map(a => a?.src).filter(Boolean)
+          : [])
+    ].filter(Boolean);
 
-        await renderFromPayload(payload);
-        showContent();
+    const filtered = urls.filter(u =>
+      /\.(mp4|webm|mp3|wav|m4a|pdf|png|jpg|jpeg|webp|gif)(\?|$)/i.test(String(u))
+    );
 
-      }catch(e){
-        // fallback to cached payload
-        const cachedPayload = loadSharePayload(sid);
-        if (cachedPayload){
-          await renderFromPayload(cachedPayload);
-          showContent();
-          return;
-        }
-        showExpiredUI(sid);
-      }
-    })();
+    if (filtered.length > 0) {
+      let total = filtered.length;
+      let done = 0;
+
+      const loaderTitle = document.getElementById('loaderTitle');
+      const loaderSub   = document.getElementById('loaderSub');
+
+      await Promise.all(
+        filtered.map(async (u) => {
+          try { await downloadAndStoreBlob(u); } catch(e){}
+
+          done++;
+          const percent = Math.round((done / total) * 100);
+
+          if (loaderTitle) loaderTitle.textContent = `Loading property... ${percent}%`;
+          if (loaderSub) loaderSub.textContent = `Downloading media ${done} of ${total}`;
+        })
+      );
+    }
+
+    // 4️⃣ Now render
+    await renderFromPayload(payload);
+    showContent();
+
+  } catch(e){
+
+    const cachedPayload = loadSharePayload(sid);
+    if (cachedPayload){
+      await renderFromPayload(cachedPayload);
+      showContent();
+      return;
+    }
+
+    showExpiredUI(sid);
+  }
+})();
+
   })();
 </script>
 
