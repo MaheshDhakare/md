@@ -196,7 +196,7 @@
   <div id="pageLoader">
     <div class="loaderSpin"></div>
 	<div id="loaderTitle" style="font-weight:900;font-family:system-ui;">Loading property...</div>
-	<div id="loaderSub" style="opacity:.7;font-size:13px;">Please wait</div>
+	<!-- <div id="loaderSub" style="opacity:.7;font-size:13px;">Please wait</div> -->
 	
   </div>
 
@@ -859,7 +859,7 @@
       let done = 0;
 
       const loaderTitle = document.getElementById('loaderTitle');
-      const loaderSub   = document.getElementById('loaderSub');
+      <!-- const loaderSub   = document.getElementById('loaderSub'); -->
 
       await Promise.all(
         filtered.map(async (u) => {
@@ -868,8 +868,8 @@
           done++;
           const percent = Math.round((done / total) * 100);
 
-          if (loaderTitle) loaderTitle.textContent = `Loading property... ${percent}%`;
-          if (loaderSub) loaderSub.textContent = `Downloading media ${done} of ${total}`;
+          if (loaderTitle) loaderTitle.textContent = `Loading details... ${percent}%`;
+          <!-- if (loaderSub) loaderSub.textContent = `Downloading media ${done} of ${total}`; -->
         })
       );
     }
